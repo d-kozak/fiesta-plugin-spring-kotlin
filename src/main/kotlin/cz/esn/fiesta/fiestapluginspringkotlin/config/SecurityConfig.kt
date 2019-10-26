@@ -1,7 +1,9 @@
 package cz.esn.fiesta.fiestapluginspringkotlin.config
 
 import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpStatus
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
 import org.springframework.security.core.Authentication
@@ -13,10 +15,16 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 
-class SecurityConfig : WebSecurityConfigurerAdapter() {
+@Configuration
+class SecurityConfig(
+        val authProvider: FiestaDelegatingAuthProvider
+) : WebSecurityConfigurerAdapter() {
+
+
 
     override fun configure(http: HttpSecurity) {
-        http.cors()
+        http.csrf().disable()
+                .cors()
                 .and()
                 .exceptionHandling()
                 .authenticationEntryPoint(authenticationEntryPoint())
@@ -28,13 +36,19 @@ class SecurityConfig : WebSecurityConfigurerAdapter() {
                 .authenticated()
                 .and()
                 .formLogin()
-                .loginProcessingUrl("api/login")
+                .loginProcessingUrl("/api/login")
+                .usernameParameter("email")
+                .passwordParameter("password")
                 .successHandler(authenticationSuccessHandler())
                 .failureHandler(authenticationFailureHandler())
                 .and()
                 .logout()
-                .logoutUrl("api/logout")
+                .logoutUrl("/api/logout")
                 .logoutSuccessHandler(HttpStatusReturningLogoutSuccessHandler(HttpStatus.OK))
+    }
+
+    override fun configure(auth: AuthenticationManagerBuilder) {
+        auth.authenticationProvider(authProvider)
     }
 
     @Bean
